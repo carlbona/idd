@@ -1,0 +1,12 @@
+Package: idd
+Type: Package
+Title: Incidence difference-in-differences methods with automatic control selection
+Version: 0.3
+Author: Carl Bonander
+Maintainer: Carl Bonander <carl.bonander@kau.se>
+Description: The package contains functions for data-driven control group selection and estimation for difference-in-differences analysis of epidemiological data.
+Imports: doBy, plyr, ggplot2, spatstat
+Suggests: grid, gridExtra
+License: GPL
+LazyData: TRUE
+RoxygenNote: 6.0.1
