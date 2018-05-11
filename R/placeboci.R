@@ -3,6 +3,7 @@
 #'
 #' @param object An R object containing the results from a set of placebo studies obtained using \code{iddplacebo}.
 #' @param alpha The significance level, defaults to 0.05 for 95 percent CI.
+#' @param mult Multiplier for the rate, defaults to 100000.
 #'
 #' @return The code prints the CI for the average post-intervention effect, and returns a data frame containing the time-varying CI. To be used with \code{iddplacebo.ciplot} or \code{iddplacebo.pplot}.
 #' @examples
@@ -21,7 +22,7 @@
 #' @export
 
 
-placeboci <- function(object, alpha=0.05) {
+placeboci <- function(object, alpha=0.05, mult=100000) {
         subsample = NULL
         time_c = NULL
         realtr.x = NULL
@@ -72,9 +73,9 @@ placeboci <- function(object, alpha=0.05) {
                 densf1 <- stats::density(f1)
                 densf2 <- stats::density(f2)
 
-                t_rec_upper <- spatstat::quantile.density(densf1, p=0.95, warn=FALSE)
+                t_rec_upper <- spatstat::quantile.density(densf1, p=1-alpha, warn=FALSE)
 
-                t_rec_lower <- spatstat::quantile.density(densf2, p=0.05, warn=FALSE)
+                t_rec_lower <- spatstat::quantile.density(densf2, p=alpha, warn=FALSE)
 
                 #Store results
 
@@ -89,9 +90,9 @@ placeboci <- function(object, alpha=0.05) {
         densf1 <- stats::density(f1)
         densf2 <- stats::density(f2)
 
-        att_rec_upper <- spatstat::quantile.density(densf1, p=0.95, warn=FALSE)
+        att_rec_upper <- spatstat::quantile.density(densf1, p=1-alpha, warn=FALSE)
 
-        att_rec_lower <- spatstat::quantile.density(densf2, p=0.05, warn=FALSE)
+        att_rec_lower <- spatstat::quantile.density(densf2, p=alpha, warn=FALSE)
 
 
         #Store results
@@ -103,8 +104,12 @@ placeboci <- function(object, alpha=0.05) {
 
         #Print results
 
-        print(paste0("ATT Estimate: ", att))
-        print(paste0("Lower 95% placebo-based CI for ATT: ", att_rec_lower))
-        print(paste0("Upper 95% placebo-based CI for ATT: ", att_rec_upper))
+        cat("Difference-in-differences estimate (average effect): ", round(att*mult, 5), "\n",
+            "Lower placebo-based CI for ATT: ", round(att_rec_lower*mult, 5), "\n",
+            "Upper placebo-based CI for ATT: ", round(att_rec_upper*mult, 5), "\n", "\n",
+            "Notes", "\n",
+            "-----", "\n",
+            "Selected alpha-level: ", alpha,". Time-varying results are stored in the object.", sep="")
+
         return(res)
 }

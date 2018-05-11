@@ -28,7 +28,7 @@ placebo.out <- iddplacebo(eventvar="y",
              treatvar="treat",
              data=simpanel,
              iter=50)
-ci.out <- placebo.ci(placebo.out, alpha=0.05)
+ci.out <- placeboci(placebo.out, alpha=0.05)
 placebo.ciplot(ci.out)
 }
 }

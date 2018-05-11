@@ -49,7 +49,8 @@ iddplacebo <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, data
         df <- subset(df.act, TR==0)
 
         T.orig <- length(unique(df$TI))
-
+        cat("Running ", iter, " placebo studies, please wait...", sep="")
+        pb <- utils::txtProgressBar(min = 0, max = iter, style = 3)
         for (i in 1:iter) {
 
                 T.min <- 1
@@ -103,6 +104,7 @@ iddplacebo <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, data
                 effectmat[[i]] <- cbind(effect, time, subsample, post, zeromeanp, trendp, row.names=NULL)
                 subsample <- i
                 resmat[[i]] <- cbind(RMSE_RATIO, RMSE_T0, RMSE_T1, T.min, T.max, T, T1, N, N.treat, subsample, row.names=NULL)
+                utils::setTxtProgressBar(pb, i)
 
         }
         resdat <- plyr::ldply(resmat, data.frame) #Flatten list to data frame
@@ -175,9 +177,15 @@ iddplacebo <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, data
 
         #Print
 
-        print(paste0("Rank: ", rank))
-        print(paste0("Denomiator (unique ranks): ", denom))
-        print(paste0("Placebo p-value (inverse rank): ", pval))
+        cat("\n", "Results", "\n",
+            "-------", "\n",
+            "Rank: ", rank, "\n",
+            "Denominator (unique subsamples): ", denom, "\n",
+            "Placebo p-value (rank/unique subsamples): ", pval, "\n", "\n",
+            "Notes", "\n",
+            "-----", "\n",
+            "Use the placeboci function to obtain interval estimates.", sep="")
+
 
         #Store and return the full results matrix and the empirical distribution function Fn(RMSE_RATIO).
 
@@ -188,5 +196,6 @@ iddplacebo <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, data
         reslist[[4]] <- RMSE_RATIO
         reslist[[5]] <- supp_stats
         names(reslist) <- c("Resdata", "ECDF", "Effects", "Treat.ratio", "supp_stats")
+        base::close(pb)
         return(reslist)
 }

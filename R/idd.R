@@ -132,7 +132,7 @@ idd <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, names=NULL,
         x_ctrl <- cl[2:nrow(cl),]
         x_tr <- cl[1,]
         sq_dist <- apply(x_ctrl, 1, function(x) (x_tr-x)^2)
-        distvec <- rank(as.vector(sqrt(colSums(sq_dist))))
+        distvec <- rank(as.vector(sqrt(colSums(sq_dist))), ties.method="first")
 
         #Gen treat output data
 
@@ -142,10 +142,13 @@ idd <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, names=NULL,
         #Identify and cross-validate k nearest neighbours##
         ###################################################
 
+        cat("Matching, please wait...", sep="")
+        pb <- utils::txtProgressBar(min = 0, max = nrow(sq_dist), style = 3)
+
         cv.error <- as.list(rep(NA),nrow(sq_dist)) ##Empty store list
         cv.error2 <- as.list(rep(NA), length(rankvec)) ##Empty store list
         for (t in 1:nrow(sq_dist)) { #Loop over each t in T0 (pre-period)
-                rankvec <- rank(as.vector(sqrt(colSums(sq_dist[-t,])))) #Remove 1 obs (in time) and rank and calculate Euc distance
+                rankvec <- rank(as.vector(sqrt(colSums(sq_dist[-t,]))), ties.method="first") #Remove 1 obs (in time) and rank and calculate Euc distance
                 idrank <- as.data.frame(cbind(X[-1,1], rankvec, row.names = NULL)) #Match ranking to id numbers
                 colnames(idrank) <- c("id", "rank") #Change column names
                 kneardat <- merge(df, idrank, by=c("id")) #set rank for t-training data
@@ -167,6 +170,7 @@ idd <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, names=NULL,
                 }
                 cv.error2[[t]] <- plyr::ldply(cv.error, data.frame) #Store for t, k
                 cv.error2[[t]][,2] <- 1:length(rankvec) #add reference number for k (for summary)
+                utils::setTxtProgressBar(pb, t)
         }
         errordat <- plyr::ldply(cv.error2, data.frame) #Flatten list to data frame
         colnames(errordat) <- c("cv", "k")
@@ -174,13 +178,14 @@ idd <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, names=NULL,
         k.mean <- doBy::summaryBy(cv~k, FUN=mean, data=errordat) #Compute mean cross-validation error for each k
         k.mean$cv.mean <- sqrt(k.mean$cv.mean)
         k.min <- which.min(k.mean$cv.mean) #Extract best selection for k according to leave-one-out cross validation on RMSE
-        cv.rmse <- k.mean$cv.mean[k.min]
+        cv.rmse <- k.mean$cv.mean[k.min] #cv error for the matched k
+        cv.fullsample <- k.mean$cv.mean[nrow(k.mean)] #cv error for the entire sample (store for comparison)
 
         #######################################
         ##Obtain effect estimates for best k ##
         #######################################
 
-        rankvec <- rank(as.vector(sqrt(colSums(sq_dist)))) #Rank using all T0 obs
+        rankvec <- rank(as.vector(sqrt(colSums(sq_dist))), ties.method="first") #Rank using all T0 obs
         distance <- as.vector(sqrt(colSums(sq_dist)))
         idrank <- as.data.frame(cbind(X[-1,1], rankvec, distance, row.names = NULL)) #Match ranking to id numbers
         colnames(idrank) <- c("id", "rank", "euc_dist") #Change column names
@@ -269,6 +274,18 @@ idd <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, names=NULL,
         ratio.up <- exp(lnratio+stats::qnorm(0.975)*rrse)
         ratio.lo <- exp(lnratio-stats::qnorm(0.975)*rrse)
 
+        #Compute some basic stats for epidemiological tables and classic DD plotting
+
+        y_tr0 <- sum(as.numeric(predat$y1.sum))
+        y_tr1 <- sum(as.numeric(postdat$y1.sum))
+        y_c0 <- sum(as.numeric(predat$y0.sum))
+        y_c1 <- sum(as.numeric(postdat$y0.sum))
+        p_tr0 <- sum(as.numeric(predat$p1.sum))
+        p_tr1 <- sum(as.numeric(postdat$p1.sum))
+        p_c0 <- sum(as.numeric(predat$p0.sum))
+        p_c1 <- sum(as.numeric(postdat$p0.sum))
+
+        epitable <- as.data.frame(cbind(y_tr0,p_tr0,y_tr1,p_tr1,y_c0,p_c0,y_c1,p_c1))
 
         #Store results
 
@@ -276,16 +293,45 @@ idd <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, names=NULL,
 
         if (isTRUE(print)) {
 
-                print(paste0("k*: ", k.min))
-                print(paste0("DD est (avg effect, 100.000 pop): ", round(dd*mult, 4)))
-                print(paste0("DD est (se): ", round(dd_se*mult, 4)))
-                print(paste0("DD est (p-value): ", round(dd_pval, 5)))
-                print(paste0("Cumulative effect (in events): ", round(cm.events, 1)))
-                print(paste0("Cumulative effect (lower, 95% CI): ", round(cm.events.lower, 1)))
-                print(paste0("Cumulative effect (upper, 95% CI): ", round(cm.events.upper, 1)))
-                print(paste0("Ratio effect (compared to counterfactual): ", round(ratio, 4)))
-                print(paste0("Ratio effect (lower, 95% CI): ", round(ratio.lo, 4)))
-                print(paste0("Ratio effect (upper, 95% CI): ", round(ratio.up, 4)))
+                cat("\n", "Matching results", "\n",
+                    "----------------", "\n",
+                    "Number of potential controls: ", nrow(k.mean), "\n",
+                    "Number of controls used (k*): ", k.min, "\n",
+                    "Cross-validation error before matching: ", cv.fullsample, "\n",
+                    "Cross-validation error after matching: ", cv.rmse, "\n",
+                    "Error ratio (after/before matching): ", round(cv.rmse/cv.fullsample, 5), "\n",
+                    "\n",
+                    "Difference-in-differences results", "\n",
+                    "---------------------------------", "\n",
+                    "Average effect (rate difference, 95% CI): ",
+                    round(dd*mult, 4), " (",
+                    round((dd-dd_se*stats::qnorm(0.975))*mult, 4), ",",
+                    round((dd+dd_se*stats::qnorm(0.975))*mult, 4), ")",
+                    "\n",
+                    "Standard error: ", round(dd_se*mult, 4), "\n",
+                    "P-value: ", round(dd_pval, 10), "\n", "\n",
+                    "Alternative estimators", "\n",
+                    "----------------------", "\n",
+                    "Cumulative effect (in events, 95% CI): ",
+                    round(cm.events, 1), " (",
+                    round(cm.events.lower, 1), ",",
+                    round(cm.events.upper, 1), ")", "\n",
+                    "Ratio effect (compared to counterfactual, 95% CI): ",
+                    round(ratio, 4), " (",
+                    round(ratio.lo, 4), ",",
+                    round(ratio.up, 4), ")",
+                    "\n",
+                    "\n",
+                    "Data table", "\n",
+                    "----------", "\n",
+                    "Treated (pre-period)  || Event freq.: ", y_tr0, " | Exposure-time: ", p_tr0, " | Rate: ", (y_tr0)/(p_tr0)*mult, "\n",
+                    "Treated (post-period) || Event freq.: ", y_tr1, " | Exposure-time: ", p_tr1, " | Rate: ", (y_tr1)/(p_tr1)*mult, "\n",
+                    "Control (pre-period)  || Event freq.: ", y_c0, " | Exposure-time: ", p_c0, " | Rate: ", (y_c0)/(p_c0)*mult, "\n",
+                    "Control (post-period) || Event freq.: ", y_c1, " | Exposure-time: ", p_c1, " | Rate: ", (y_c1)/(p_c1)*mult, "\n", "\n",
+                    "Notes", "\n",
+                    "-----", "\n",
+                    "Rates are multiplied by ", as.integer(mult), ", use mult-command to change.", "\n",
+                    "Time-varying results are stored in object$Resdat.", sep="")
 
         }
 
@@ -294,7 +340,9 @@ idd <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, names=NULL,
         results[[2]] <- k.mean
         results[[3]] <- as.data.frame(cbind(k.min,dd,dd_se,dd_pval,cm.events, cm.events.lower, cm.events.upper, ratio, ratio.lo, ratio.up, cv.rmse, dd_donor, row.names = NULL))
         results[[4]] <- id.selected
-        names(results) <- c("Resdat", "cv_errors", "supp_stats", "id_controls")
+        results[[5]] <- epitable
+        names(results) <- c("Resdat", "cv_errors", "supp_stats", "id_controls", "epitable")
+        base::close(pb)
 
         return(results)
 }

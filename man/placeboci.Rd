@@ -4,12 +4,14 @@
 \alias{placeboci}
 \title{Estimate placebo-based confidence intervals.}
 \usage{
-placeboci(object, alpha = 0.05)
+placeboci(object, alpha = 0.05, mult = 100000)
 }
 \arguments{
 \item{object}{An R object containing the results from a set of placebo studies obtained using \code{iddplacebo}.}
 
 \item{alpha}{The significance level, defaults to 0.05 for 95 percent CI.}
+
+\item{mult}{Multiplier for the rate, defaults to 100000.}
 }
 \value{
 The code prints the CI for the average post-intervention effect, and returns a data frame containing the time-varying CI. To be used with \code{iddplacebo.ciplot} or \code{iddplacebo.pplot}.
