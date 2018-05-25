@@ -4,12 +4,16 @@
 \alias{iddplacebo.hist}
 \title{Plot a histogram of placebo effects.}
 \usage{
-iddplacebo.hist(x, binwidth = NULL)
+iddplacebo.hist(x, binwidth = NULL, convert = FALSE, mult = 100000)
 }
 \arguments{
 \item{x}{Name of the \code{iddplacebo} output object.}
 
 \item{binwidth}{Control the binwidth (optional). Defaults to 2*IQR(RMSE)/(length(RMSE)^(1/3)).}
+
+\item{convert}{Convert to effect sizes? Defaults to FALSE, presenting RMSE Ratios.}
+
+\item{mult}{Multiplier for the effect size (only used with convert=TRUE).}
 }
 \value{
 Returns a ggplot containing a histogram of the post/pre-RMSE ratios from the placebo studies.
