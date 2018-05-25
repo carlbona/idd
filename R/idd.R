@@ -142,8 +142,12 @@ idd <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, names=NULL,
         #Identify and cross-validate k nearest neighbours##
         ###################################################
 
+        if (isTRUE(print)) {
+
         cat("Matching, please wait...", sep="")
         pb <- utils::txtProgressBar(min = 0, max = nrow(sq_dist), style = 3)
+
+        }
 
         cv.error <- as.list(rep(NA),nrow(sq_dist)) ##Empty store list
         cv.error2 <- as.list(rep(NA), length(rankvec)) ##Empty store list
@@ -170,7 +174,9 @@ idd <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, names=NULL,
                 }
                 cv.error2[[t]] <- plyr::ldply(cv.error, data.frame) #Store for t, k
                 cv.error2[[t]][,2] <- 1:length(rankvec) #add reference number for k (for summary)
+                if (isTRUE(print)) {
                 utils::setTxtProgressBar(pb, t)
+                }
         }
         errordat <- plyr::ldply(cv.error2, data.frame) #Flatten list to data frame
         colnames(errordat) <- c("cv", "k")
@@ -342,7 +348,9 @@ idd <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, names=NULL,
         results[[4]] <- id.selected
         results[[5]] <- epitable
         names(results) <- c("Resdat", "cv_errors", "supp_stats", "id_controls", "epitable")
+        if (isTRUE(print)) {
         base::close(pb)
+        }
 
         return(results)
 }

@@ -28,6 +28,7 @@ placeboci <- function(object, alpha=0.05, mult=100000) {
         realtr.x = NULL
         realtr = NULL
         att <- object$supp_stats$dd
+        att_R <- object$Treat.ratio
         att_pval <- object$supp_stats$pval
         df <- object$Effects
         df$RMSE_t <- sqrt(df$effect^2)
@@ -84,9 +85,15 @@ placeboci <- function(object, alpha=0.05, mult=100000) {
         res <- plyr::ldply(tpval, data.frame)
         #Obtain confidence interval for DD
 
+        #Construct the key (see paper)
+
+        key <- abs(att)/att_R
+
         res$post <- subset(df, realtr==1)$post
-        f1 <- att+unique(df2$RMSE_RATIO)*subset(df2, realtr==1)$RMSE_T0
-        f2 <- att-unique(df2$RMSE_RATIO)*subset(df2, realtr==1)$RMSE_T0
+        #f1 <- att+unique(df2$RMSE_RATIO)*subset(df2, realtr==1)$RMSE_T0
+        #f2 <- att-unique(df2$RMSE_RATIO)*subset(df2, realtr==1)$RMSE_T0
+        f1 <- att+unique(df2$RMSE_RATIO)*key
+        f2 <- att-unique(df2$RMSE_RATIO)*key
         densf1 <- stats::density(f1)
         densf2 <- stats::density(f2)
 
