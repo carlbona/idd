@@ -94,16 +94,15 @@ iddplacebo <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, data
                 post <- mtch$Resdat$post
                 subsample <- rep(i, length(time)) #Ids for plotting
 
-                #Store zero-mean and trend test
+                #Obtain parametric p-value (for evaluation)
 
-                zeromeanp <- rep(mtch$supp_stats$meanp, length(time))
-                trendp <- rep(mtch$supp_stats$trend2p, length(time))
+                param_p <- mtch$supp_stats$dd_pval
 
                 #Get results
                 T <- length(T.min:T.max)
-                effectmat[[i]] <- cbind(effect, time, subsample, post, zeromeanp, trendp, row.names=NULL)
+                effectmat[[i]] <- cbind(effect, time, subsample, post, row.names=NULL)
                 subsample <- i
-                resmat[[i]] <- cbind(RMSE_RATIO, RMSE_T0, RMSE_T1, T.min, T.max, T, T1, N, N.treat, subsample, row.names=NULL)
+                resmat[[i]] <- cbind(RMSE_RATIO, RMSE_T0, RMSE_T1, param_p, T.min, T.max, T, T1, N, N.treat, subsample, row.names=NULL)
                 utils::setTxtProgressBar(pb, i)
 
         }
@@ -126,9 +125,10 @@ iddplacebo <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, data
         RMSE_RATIO <- RMSE_T1/RMSE_T0
         subsample <- as.numeric(0)
         dd_orig <- orig$supp_stats$dd
+        param_p <- orig$supp_stats$dd_pval
         #Set the results data.frame
 
-        resdat2 <- as.data.frame(cbind(RMSE_RATIO, RMSE_T0, RMSE_T1, T.min, T.max, T, T1, N, N.treat, subsample, row.names=NULL))
+        resdat2 <- as.data.frame(cbind(RMSE_RATIO, RMSE_T0, RMSE_T1, param_p, T.min, T.max, T, T1, N, N.treat, subsample, row.names=NULL))
         resdat$realtr <- as.numeric(0)
         resdat2$realtr <- as.numeric(1)
         resdata <- rbind(resdat, resdat2)
@@ -142,10 +142,7 @@ iddplacebo <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, data
 
         #Store test results
 
-        zeromeanp <- rep(orig$supp_stats$meanp, length(time))
-        trendp <- rep(orig$supp_stats$trend2p, length(time))
-
-        effectmat2 <- as.data.frame(cbind(effect, time, subsample, post, zeromeanp, trendp, row.names=NULL))
+        effectmat2 <- as.data.frame(cbind(effect, time, subsample, post, row.names=NULL))
         effectmat$realtr <- as.numeric(0)
         effectmat2$realtr <- as.numeric(1)
         effectdata <- rbind(effectmat, effectmat2)
@@ -171,7 +168,7 @@ iddplacebo <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, data
         Fn <- stats::ecdf(unique(resdata$RMSE_RATIO))
         pval_ecdf <- 1-Fn(RMSE_RATIO)
 
-        #Store p-value data data
+        #Store p-value data
 
         supp_stats <- as.data.frame(cbind(rank, denom, pval, pval_ecdf, dd_orig))
 

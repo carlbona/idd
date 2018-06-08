@@ -43,6 +43,7 @@ idd <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, names=NULL,
         id <- data[,idvar]
         namevar <- as.character(data[,names])
         TI_c <- TI-(min(TI)-1)
+        rate = NULL
 
         df <- as.data.frame(cbind(E, P, TR, PO, TI, TI_c, id))
 
@@ -212,6 +213,13 @@ idd <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, names=NULL,
                 id.selected <- stats::aggregate(cbind(id, rank, euc_dist, row.names=NULL) ~ name, data=id.selected, FUN=mean)
         }
 
+        #Obtain matched dataset
+        mtchctrl <- subset(ctrldat, rank<=k.min)
+        treatdat <- subset(df, TR==1)
+        treatdat$rank <- NA
+        treatdat$euc_dist <- NA
+        matched_data <- rbind(treatdat, mtchctrl)
+        matched_data$rate <- matched_data$E/matched_data$P
 
         #Summarize control data
         ctrlout <- doBy::summaryBy(E + P ~ TI, FUN=sum, data=subset(ctrldat, rank<=k.min), var.names=c("y0", "p0"), id="PO")
@@ -236,12 +244,23 @@ idd <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, names=NULL,
         cx <- sum(as.numeric(predat$yx.sum))/sum(as.numeric(predat$px.sum))
         yx <- outdat$yx.sum/outdat$px.sum
 
+        #Design effects
+
+        icc <- ICC::ICCbare(as.factor(id), rate, data=matched_data)
+        m <- length(unique(df$TI))
+        if (isTRUE(icc<0) == TRUE) { #Check if ICC estimate is negative, if so, reset to zero.
+                icc <- 0
+        }
+        DEFT <- sqrt(1+icc*(m-1))
+        m2 <- length(unique(predat$TI))+1
+        DEFT.t <- sqrt(1+icc*(m2-1))
+
         #Compute time-varying effects
         cf <- (t0-c0)+y0
         effect <- y1-cf
         cf.donor <- (t0-cx)+yx
 
-        se <- sqrt(sum(predat$y1.sum)/(sum(as.numeric(predat$p1.sum))^2)+sum(predat$y0.sum)/(sum(as.numeric(predat$p0.sum))^2)+outdat$y0.sum/(as.numeric(outdat$p0.sum^2))+outdat$y1.sum/(as.numeric(outdat$p1.sum^2)))
+        se <- sqrt(sum(predat$y1.sum)/(sum(as.numeric(predat$p1.sum))^2)+sum(predat$y0.sum)/(sum(as.numeric(predat$p0.sum))^2)+outdat$y0.sum/(as.numeric(outdat$p0.sum^2))+outdat$y1.sum/(as.numeric(outdat$p1.sum^2)))*DEFT.t
         z <- abs(effect/se)
         pval <- 2*stats::pnorm(-z)
 
@@ -257,7 +276,7 @@ idd <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, names=NULL,
         c1 <- sum(as.numeric(postdat$y0.sum))/sum(as.numeric(postdat$p0.sum))
         c1x <- sum(as.numeric(postdat$yx.sum))/sum(as.numeric(postdat$px.sum))
         dd <- (t1-t0)-(c1-c0)
-        dd_se <- sqrt(sum(predat$y1.sum)/(sum(as.numeric(predat$p1.sum))^2)+sum(predat$y0.sum)/(sum(as.numeric(predat$p0.sum))^2)+sum(postdat$y1.sum)/(sum(as.numeric(postdat$p1.sum))^2)+sum(postdat$y0.sum)/(sum(as.numeric(postdat$p0.sum))^2))
+        dd_se <- sqrt(sum(predat$y1.sum)/(sum(as.numeric(predat$p1.sum))^2)+sum(predat$y0.sum)/(sum(as.numeric(predat$p0.sum))^2)+sum(postdat$y1.sum)/(sum(as.numeric(postdat$p1.sum))^2)+sum(postdat$y0.sum)/(sum(as.numeric(postdat$p0.sum))^2))*DEFT
         dd_z <- abs(dd/dd_se)
         dd_pval <- 2*stats::pnorm(-dd_z)
         dd_donor <- (t1-t0)-(c1x-cx)
@@ -276,7 +295,7 @@ idd <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, names=NULL,
         post.events <- sum(postdat$y1.sum)
         ratio <- (post.events)/(post.events-cm.events)
         lnratio <- log(ratio)
-        rrse <- sqrt((1/sum(predat$y1))+(1/sum(predat$y0))+(1/sum(postdat$y1))+(1/sum(postdat$y0)))
+        rrse <- sqrt((1/sum(predat$y1))+(1/sum(predat$y0))+(1/sum(postdat$y1))+(1/sum(postdat$y0)))*DEFT
         ratio.up <- exp(lnratio+stats::qnorm(0.975)*rrse)
         ratio.lo <- exp(lnratio-stats::qnorm(0.975)*rrse)
 
@@ -306,6 +325,8 @@ idd <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, names=NULL,
                     "Cross-validation error before matching: ", cv.fullsample, "\n",
                     "Cross-validation error after matching: ", cv.rmse, "\n",
                     "Error ratio (after/before matching): ", round(cv.rmse/cv.fullsample, 5), "\n",
+                    "Intra-class correlation coefficient (ICC): ", icc, "\n",
+                    "Design effect (multipler for standard errors) ", round(DEFT, 5), "\n",
                     "\n",
                     "Difference-in-differences results", "\n",
                     "---------------------------------", "\n",
@@ -347,7 +368,8 @@ idd <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, names=NULL,
         results[[3]] <- as.data.frame(cbind(k.min,dd,dd_se,dd_pval,cm.events, cm.events.lower, cm.events.upper, ratio, ratio.lo, ratio.up, cv.rmse, dd_donor, row.names = NULL))
         results[[4]] <- id.selected
         results[[5]] <- epitable
-        names(results) <- c("Resdat", "cv_errors", "supp_stats", "id_controls", "epitable")
+        results[[6]] <- matched_data
+        names(results) <- c("Resdat", "cv_errors", "supp_stats", "id_controls", "epitable", "matched_data")
         if (isTRUE(print)) {
         base::close(pb)
         }

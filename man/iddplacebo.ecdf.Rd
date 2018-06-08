@@ -4,12 +4,18 @@
 \alias{iddplacebo.ecdf}
 \title{Plot the inverse empirical cumulative distribution function from the placebo studies.}
 \usage{
-iddplacebo.ecdf(x, alpha = 0.05)
+iddplacebo.ecdf(x, alpha = 0.05, convert = FALSE, mult = 100000, quantile = FALSE)
 }
 \arguments{
 \item{x}{Name of the \code{iddplacebo} output object.}
 
 \item{alpha}{controls the shaded significance region on the plot. Defaults to 0.05.}
+
+\item{convert}{Convert x-axis to effect size? Defaults to FALSE.}
+
+\item{mult}{Multiplier for the effect size (only used with convert=TRUE).}
+
+\item{quantile}{Add reference line for the acceptance region? Defaults to FALSE.}
 }
 \value{
 Returns a ggplot containing the E.C.D.F. of the post/pre-RMSE ratios from the placebo studies.

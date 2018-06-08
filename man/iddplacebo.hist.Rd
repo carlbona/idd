@@ -4,7 +4,8 @@
 \alias{iddplacebo.hist}
 \title{Plot a histogram of placebo effects.}
 \usage{
-iddplacebo.hist(x, binwidth = NULL, convert = FALSE, mult = 100000)
+iddplacebo.hist(x, binwidth = NULL, convert = FALSE, mult = 100000,
+alpha = 0.05, quantile = FALSE)
 }
 \arguments{
 \item{x}{Name of the \code{iddplacebo} output object.}
@@ -14,6 +15,10 @@ iddplacebo.hist(x, binwidth = NULL, convert = FALSE, mult = 100000)
 \item{convert}{Convert to effect sizes? Defaults to FALSE, presenting RMSE Ratios.}
 
 \item{mult}{Multiplier for the effect size (only used with convert=TRUE).}
+
+\item{alpha}{Alpha for the acceptance region reference line.}
+
+\item{quantile}{Add reference line for the acceptance region? Defaults to FALSE.}
 }
 \value{
 Returns a ggplot containing a histogram of the post/pre-RMSE ratios from the placebo studies.
