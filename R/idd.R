@@ -299,6 +299,7 @@ idd <- function(eventvar, popvar, treatvar, postvar, timevar, idvar, names=NULL,
         ratio.up <- exp(lnratio+stats::qnorm(0.975)*rrse)
         ratio.lo <- exp(lnratio-stats::qnorm(0.975)*rrse)
 
+
         #Compute some basic stats for epidemiological tables and classic DD plotting
 
         y_tr0 <- sum(as.numeric(predat$y1.sum))

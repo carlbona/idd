@@ -22,7 +22,7 @@ A panel dataset of residential fires in 153 rescue service confederations in Swe
 }
 \examples{
 \dontrun{
-#This code replicates the results from the paper.
+#This code replicates the case study results from the paper (Bonander, in preparation).
 
 data(homevisits) #Open the data
 
@@ -39,19 +39,18 @@ firmod <- idd(eventvar="fires",
 
 firmod$id_controls #Show the selected controls
 
-idd.kplot(firmod) #Plot the k-minimization function (figure 1)
+idd.kplot(firmod) #Plot the k-minimization function (figure 2)
 
-#Reproduce figure 2 using grid and gridExtra
+#Reproduce figure 3 using grid and gridExtra
 
-A <- idd.dplot(firmod, donor=TRUE)
-B <- idd.cfplot(firmod, mult=100000, donor=TRUE)
-C <- idd.gplot(firmod, mult=100000)
-D <- idd.pplot(firmod)
+A <- idd.cfplot(firmod, mult=100000)
+B <- idd.gplot(firmod, mult=100000)
+B <- idd.pplot(firmod)
 
 require(grid)
 require(gridExtra)
 
-grid.arrange(A, B, C, D, ncol=2)
+grid.arrange(A, B, C, ncol=1)
 
 #Perform the placebo studies (fair warning: 1000 iterations will take a while; expect 15-30 min)
 
@@ -66,17 +65,44 @@ placebt <- iddplacebo(eventvar="fires",
                      data=homevisits,
                      iter=1000)
 
+#Reproduce figure 4
+
+A2 <- iddplacebo.hist(placebt, convert=F, quantile=T)
+B2 <- iddplacebo.hist(placebt, convert=T, quantile=T)
+C2 <- iddplacebo.ecdf(placebt, convert=T, quantile=T)
+grid.arrange(A2, B2, C2, ncol=1)
+
 #Obtain placebo-based confidence intervals and p-values
 
 pci <- placeboci(placebt, alpha=0.05)
 
-#Reproduce figure 3
+#Reproduce figure 5
 
-A1 <- iddplacebo.ecdf(placebt)
-B1 <- iddplacebo.hist(placebt)
-C1 <- placebo.ciplot(pci)
-D1 <- placebo.pplot(pci)
-grid.arrange(A1, B1, C1, D1, ncol=2)
+A1 <- placebo.ciplot(pci)
+B1 <- placebo.pplot(pci)
+grid.arrange(A1, B1, ncol=1)
+
+##Other results and features
+
+#Find the probability of finding a parametric p-value <=0.05 in the untreated units
+
+mean(as.numeric(placebt$Resdata$param_p<=0.05))
+
+#Generate a Synthetic control-style "spaghetti plot" to view the placebo effects
+
+iddplacebo.spaghetti(placebt)
+
+#Find the RMSE ratio for the treated unit
+
+placebt$Treat.ratio
+
+#Look at the raw data (without standardizing the matched controls to the level of the treated unit)
+
+idd.dplot(firmod)
+
+#Add a line for the entire donor pool for comparison
+
+idd.dplot(firmod, donor=T)
 }
 }
 \keyword{datasets}
